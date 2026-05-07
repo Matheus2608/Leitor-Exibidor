@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "leitor.hpp"
+#include "exibidor.hpp"
 
 using namespace std;
 
@@ -11,8 +11,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    Leitor leitor(argv[1]);
-    leitor.read();
+    Exibidor exibidor(argv[1]);
+    exibidor.display();
 
     return 0;
 }
