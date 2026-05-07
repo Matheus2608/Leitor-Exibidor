@@ -1,7 +1,5 @@
 #include "exibidor.hpp"
-#include "leitor.hpp"
 #include <iostream>
-#include "constants.hpp"
 
 using namespace std;
 
@@ -13,9 +11,9 @@ void Exibidor::display()
 {
     cout << "Exibindo informações do arquivo " << filename << endl;
     // deve pegar o class info do leitor
-    Leitor leitor(filename);
-    leitor.read();
-    class_info info = leitor.getClassInfo();
+    Parser parser(filename);
+    class_info info = parser.parse();
+    
     // Exibir informações da classe
     cout << "Magic Number: 0x" << hex << info.magic_number << dec << endl;
     cout << "Minor Version: " << info.minor_version << endl;

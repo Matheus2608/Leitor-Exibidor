@@ -5,6 +5,8 @@
 #include <string>
 
 #include "estrutura_dados.hpp"
+#include "constants.hpp"
+#include "parser.hpp"
 
 class Exibidor {
 public:
