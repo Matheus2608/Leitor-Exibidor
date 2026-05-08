@@ -24,6 +24,17 @@ private:
     void majorVersionCheck();
     void constantPoolCountCheck();
     void constantPoolCheck();
+    void acessFlagsCheck();
+    void thisClassCheck();
+    void superClassCheck();
+    void interfacesCountCheck();
+    void interfacesCheck();
+    void fieldsCountCheck();
+    void fieldsCheck();
+    void methodsCountCheck();
+    void methodsCheck();
+    void attributesCountCheck();
+    void attributesCheck();
 };
 
 #endif // PARSER_HPP

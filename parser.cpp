@@ -14,6 +14,17 @@ class_info Parser::parse()
     majorVersionCheck();
     constantPoolCountCheck();
     constantPoolCheck();
+    acessFlagsCheck();
+    thisClassCheck();
+    superClassCheck();
+    interfacesCountCheck();
+    interfacesCheck();
+    fieldsCountCheck();
+    fieldsCheck();
+    methodsCountCheck();
+    methodsCheck();
+    attributesCountCheck();
+    attributesCheck();
     return classInfo;
 }
 
@@ -94,5 +105,85 @@ void Parser::constantPoolCheck()
             break;
         }
         }
+    }
+}
+
+
+void Parser::acessFlagsCheck() {
+    classInfo.access_flags = leitor.readu2();   
+}
+
+void Parser::thisClassCheck() {
+    classInfo.this_class = leitor.readu2();
+}
+
+void Parser::superClassCheck() {
+    classInfo.super_class = leitor.readu2();
+}
+
+void Parser::interfacesCountCheck() {
+    classInfo.interfaces_count = leitor.readu2();
+}
+
+void Parser::interfacesCheck() {
+    classInfo.interfaces = new u2[classInfo.interfaces_count];
+    for (u2 i = 0; i < classInfo.interfaces_count; ++i) {
+        classInfo.interfaces[i] = leitor.readu2();
+    }
+}
+
+void Parser::fieldsCountCheck() {
+    classInfo.fields_count = leitor.readu2();
+}
+
+void Parser::fieldsCheck() {
+    classInfo.fields = new field_info[classInfo.fields_count];
+    for (u2 i = 0; i < classInfo.fields_count; ++i) {
+        classInfo.fields[i].access_flags = leitor.readu2();
+        classInfo.fields[i].name_index = leitor.readu2();
+        classInfo.fields[i].descriptor_index = leitor.readu2();
+        classInfo.fields[i].attributes_count = leitor.readu2();
+        classInfo.fields[i].attributes = new attribute_info[classInfo.fields[i].attributes_count];
+        for (u2 j = 0; j < classInfo.fields[i].attributes_count; ++j) {
+            classInfo.fields[i].attributes[j].attribute_name_index = leitor.readu2();
+            classInfo.fields[i].attributes[j].attribute_length = leitor.readu4();
+            classInfo.fields[i].attributes[j].info = new uint8_t[classInfo.fields[i].attributes[j].attribute_length];
+            leitor.read(classInfo.fields[i].attributes[j].info, classInfo.fields[i].attributes[j].attribute_length);
+        }
+    }
+}
+
+void Parser::methodsCountCheck() {
+    classInfo.methods_count = leitor.readu2();
+}
+
+void Parser::methodsCheck() {
+    classInfo.methods = new method_info[classInfo.methods_count];
+    for (u2 i = 0; i < classInfo.methods_count; ++i) {
+        classInfo.methods[i].access_flags = leitor.readu2();
+        classInfo.methods[i].name_index = leitor.readu2();
+        classInfo.methods[i].descriptor_index = leitor.readu2();
+        classInfo.methods[i].attributes_count = leitor.readu2();
+        classInfo.methods[i].attributes = new attribute_info[classInfo.methods[i].attributes_count];
+        for (u2 j = 0; j < classInfo.methods[i].attributes_count; ++j) {
+            classInfo.methods[i].attributes[j].attribute_name_index = leitor.readu2();
+            classInfo.methods[i].attributes[j].attribute_length = leitor.readu4();
+            classInfo.methods[i].attributes[j].info = new uint8_t[classInfo.methods[i].attributes[j].attribute_length];
+            leitor.read(classInfo.methods[i].attributes[j].info, classInfo.methods[i].attributes[j].attribute_length);
+        }
+    }
+}
+
+void Parser::attributesCountCheck() {
+    classInfo.attributes_count = leitor.readu2();
+}
+
+void Parser::attributesCheck() {
+    classInfo.attributes = new attribute_info[classInfo.attributes_count];
+    for (u2 i = 0; i < classInfo.attributes_count; ++i) {
+        classInfo.attributes[i].attribute_name_index = leitor.readu2();
+        classInfo.attributes[i].attribute_length = leitor.readu4();
+        classInfo.attributes[i].info = new uint8_t[classInfo.attributes[i].attribute_length];
+        leitor.read(classInfo.attributes[i].info, classInfo.attributes[i].attribute_length);
     }
 }
