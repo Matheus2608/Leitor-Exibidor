@@ -37,7 +37,52 @@ void Exibidor::display()
 }
 
 void Exibidor::constantPoolDisplay() {
-    // TODO
+     // Exibir informações do constant pool
+    // for (u2 i = 1; i < info.constant_pool_count; ++i)
+    // {
+    //     cout << "Constant Pool [" << i << "]: Tag = " << (int)info.constant_pool[i].tag << endl;
+    //     // Exibir detalhes específicos de cada tipo de constante
+    //     switch (info.constant_pool[i].tag)
+    //     {
+    //     case CONSTANT_Class:
+    //         cout << "  Class Name Index: " << info.constant_pool[i].container.Class.name_index << endl;
+    //         break;
+    //     case CONSTANT_Fieldref:
+    //     case CONSTANT_Methodref:
+    //     case CONSTANT_InterfaceMethodref:
+    //         cout << "  Class Index: " << info.constant_pool[i].container.Fieldref.class_index << endl;
+    //         cout << "  Name and Type Index: " << info.constant_pool[i].container.Fieldref.name_and_type_index << endl;
+    //         break;
+    //     case CONSTANT_String:
+    //         cout << "  String Index: " << info.constant_pool[i].container.String.string_index << endl;
+    //         break;
+    //     case CONSTANT_Integer:
+    //         cout << "  Integer Bytes: " << info.constant_pool[i].container.Integer.bytes << endl;
+    //         break;
+    //     case CONSTANT_Float:
+    //         cout << "  Float Bytes: " << info.constant_pool[i].container.Float.bytes << endl;
+    //         break;
+    //     case CONSTANT_Long:
+    //         cout << "  Long High Bytes: " << info.constant_pool[i].container.Long.high_bytes << endl;
+    //         cout << "  Long Low Bytes: " << info.constant_pool[i].container.Long.low_bytes << endl;
+    //         break;
+    //     case CONSTANT_Double:
+    //         cout << "  Double High Bytes: " << info.constant_pool[i].container.Double.high_bytes << endl;
+    //         cout << "  Double Low Bytes: " << info.constant_pool[i].container.Double.low_bytes << endl;
+    //         break;
+    //     case CONSTANT_NameAndType:
+    //         cout << "  Name Index: " << info.constant_pool[i].container.NameAndType.name_index << endl;
+    //         cout << "  Descriptor Index: " << info.constant_pool[i].container.NameAndType.descriptor_index << endl;
+    //         break;
+    //     case CONSTANT_Utf8:
+    //         cout << "  Utf8 Length: " << info.constant_pool[i].container.Utf8.length << endl;
+    //         // Exibir os bytes como string (assumindo que são caracteres UTF-8)
+    //         cout.write(reinterpret_cast<char *>(info.constant_pool[i].container.Utf8.bytes), info.constant_pool[i].container.Utf8.length);
+    //         cout << endl;
+    //         break;
+    //         // ... outras tags menos comuns (MethodHandle, etc) --- IGNORE --- --- IGNORE ---
+    //     }
+    // }
 }
 
 void Exibidor::fieldsDisplay() {

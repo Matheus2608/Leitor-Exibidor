@@ -3,6 +3,8 @@
 
 #include <fstream>
 #include <string>
+#include <vector>
+#include <cstddef>
 
 #include "estrutura_dados.hpp"
 
@@ -12,6 +14,15 @@ public:
     ~Leitor();
 
     void read(u1 *buffer, size_t length);
+
+    std::vector<u1> read_bytes(size_t length);
+
+    // stream position helpers
+    size_t tell();
+    void seek(size_t pos);
+
+    // ensure there are at least `length` bytes remaining, otherwise throw
+    void require(size_t length);
 
     u4 readu4();
     u2 readu2();

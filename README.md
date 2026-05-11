@@ -16,7 +16,7 @@ make
 2) Executar o binário (passar o arquivo `.class` como argumento):
 
 ```bash
-make run ARGS="Hello.class"
+make run ARGS="exemplos/Hello.class"
 # ou diretamente
 ./bin/leitor-exibidor Hello.class
 ```

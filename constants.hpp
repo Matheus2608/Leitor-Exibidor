@@ -1,5 +1,10 @@
+#ifndef CONSTANTS_HPP
+#define CONSTANTS_HPP
+
 #include <string>
 #include <cstdint>
+
+#include "estrutura_dados.hpp"
 
 #define CONSTANT_Class              7
 #define CONSTANT_Fieldref           9
@@ -53,3 +58,5 @@ inline std::string getAccessFlagsString(u2 flags) {
     
     return result.empty() ? "[nenhum flag]" : result;
 }
+
+#endif // CONSTANTS_HPP
