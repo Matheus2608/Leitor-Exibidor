@@ -3,6 +3,7 @@
 CXX = g++
 CXXFLAGS = -std=c++11 -Wall -Wextra -O2
 LDFLAGS = 
+DEPFLAGS = -MMD -MP
 
 # Diretórios
 SRC_DIR = .
@@ -12,6 +13,7 @@ OBJ_DIR = obj
 # Arquivos fonte
 SOURCES = main.cpp leitor.cpp parser.cpp exibidor.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)/%.o)
+DEPS = $(OBJECTS:.o=.d)
 EXECUTABLE = $(BIN_DIR)/leitor-exibidor
 
 # Test sources and bins
@@ -31,7 +33,7 @@ $(EXECUTABLE): $(OBJECTS) | $(BIN_DIR)
 
 # Compilação dos arquivos objeto
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 	@echo "✓ Compilado: $<"
 
 # Cria diretórios se não existirem
@@ -79,3 +81,6 @@ debug:
 	@echo "SOURCES: $(SOURCES)"
 	@echo "OBJECTS: $(OBJECTS)"
 	@echo "EXECUTABLE: $(EXECUTABLE)"
+
+# Inclui dependências geradas automaticamente para headers
+-include $(DEPS)
