@@ -35,6 +35,8 @@ private:
     void methodsCheck();
     void attributesCountCheck();
     void attributesCheck();
+
+    std::string getUtf8Constant(u2 index);
 };
 
 #endif // PARSER_HPP

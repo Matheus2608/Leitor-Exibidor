@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <memory>
 
 typedef uint8_t u1;
 typedef uint16_t u2;
@@ -25,10 +26,33 @@ struct cp_info {
     } container;
 };
 
+struct code_attribute;
+
 struct attribute_info {
     u2 attribute_name_index = 0;
     u4 attribute_length = 0;
     std::vector<u1> info;
+    std::shared_ptr<code_attribute> code_data;
+};
+
+struct exception_table_info {
+    u2 start_pc;
+    u2 end_pc;
+    u2 handler_pc;
+    u2 catch_type;
+};
+
+struct code_attribute {
+    u2 attribute_name_index = 0;
+    u4 attribute_length = 0;
+    u2 max_stack = 0;
+    u2 max_locals = 0;
+    u4 code_length = 0;
+    std::vector<u1> code;
+    u2 exception_table_length = 0;
+    std::vector<exception_table_info> exception_table;
+    u2 attributes_count = 0;
+    std::vector<attribute_info> attributes;
 };
 
 struct field_info {
@@ -67,4 +91,3 @@ struct class_info {
 };
 
 #endif // ESTRUTURA_DADOS_HPP
-

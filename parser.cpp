@@ -199,7 +199,40 @@ void Parser::methodsCheck()
             attribute_info &attribute = method.attributes[j];
             attribute.attribute_name_index = leitor.readu2();
             attribute.attribute_length = leitor.readu4();
-            attribute.info = leitor.read_bytes(attribute.attribute_length);
+
+            std::string attr_name = getUtf8Constant(attribute.attribute_name_index);
+
+            if (attr_name == "Code") {
+                attribute.code_data = std::make_shared<code_attribute>();
+                attribute.code_data->attribute_name_index = attribute.attribute_name_index;
+                attribute.code_data->attribute_length = attribute.attribute_length;
+                
+                attribute.code_data->max_stack = leitor.readu2();
+                attribute.code_data->max_locals = leitor.readu2();
+
+                attribute.code_data->code_length = leitor.readu4();
+                
+                attribute.code_data->code = leitor.read_bytes(attribute.code_data->code_length);
+                
+                attribute.code_data->exception_table_length = leitor.readu2();
+                attribute.code_data->exception_table.resize(attribute.code_data->exception_table_length);
+                for (u2 k = 0; k < attribute.code_data->exception_table_length; ++k) {
+                    attribute.code_data->exception_table[k].start_pc = leitor.readu2();
+                    attribute.code_data->exception_table[k].end_pc = leitor.readu2();
+                    attribute.code_data->exception_table[k].handler_pc = leitor.readu2();
+                    attribute.code_data->exception_table[k].catch_type = leitor.readu2();
+                }
+                
+                attribute.code_data->attributes_count = leitor.readu2();
+                attribute.code_data->attributes.resize(attribute.code_data->attributes_count);
+                for (u2 k = 0; k < attribute.code_data->attributes_count; ++k) {
+                    attribute.code_data->attributes[k].attribute_name_index = leitor.readu2();
+                    attribute.code_data->attributes[k].attribute_length = leitor.readu4();
+                    attribute.code_data->attributes[k].info = leitor.read_bytes(attribute.code_data->attributes[k].attribute_length);
+                }
+            } else {
+                attribute.info = leitor.read_bytes(attribute.attribute_length);
+            }
         }
     }
 }
@@ -219,4 +252,14 @@ void Parser::attributesCheck()
         attribute.attribute_length = leitor.readu4();
         attribute.info = leitor.read_bytes(attribute.attribute_length);
     }
+}
+
+std::string Parser::getUtf8Constant(u2 index)
+{
+    if (index == 0 || index >= classInfo.constant_pool.size()) return "";
+    
+    const cp_info &entry = classInfo.constant_pool[index];
+    if (entry.tag != CONSTANT_Utf8 || entry.container.Utf8.bytes == nullptr) return "";
+    
+    return std::string(reinterpret_cast<const char *>(entry.container.Utf8.bytes), entry.container.Utf8.length);
 }
