@@ -21,9 +21,6 @@ public:
     size_t tell();
     void seek(size_t pos);
 
-    // ensure there are at least `length` bytes remaining, otherwise throw
-    void require(size_t length);
-
     u4 readu4();
     u2 readu2();
     u1 readu1();
@@ -31,9 +28,6 @@ public:
 private:
     std::string filename;
     std::ifstream file;
-
-    u2 toBigEndian(u2 value);
-    u4 toBigEndian(u4 value);
 
 };
 

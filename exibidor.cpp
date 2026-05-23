@@ -19,18 +19,7 @@ namespace
             throw std::runtime_error("Exibidor: entrada da constant pool nao e Utf8");
         }
 
-        const auto &utf8 = entry.container.Utf8;
-        if (utf8.length == 0)
-        {
-            return "";
-        }
-
-        if (utf8.bytes == nullptr)
-        {
-            throw std::runtime_error("Exibidor: bytes Utf8 nulos");
-        }
-
-        return std::string(reinterpret_cast<const char *>(utf8.bytes), utf8.length);
+        return entry.utf8_str;
     }
 
     std::string classNameFromConstantPool(const class_info &info, u2 index)
@@ -178,7 +167,6 @@ namespace
                utf8FromConstantPool(info, entry.container.NameAndType.descriptor_index);
     }
 
-    // Retorna string legível para qualquer entrada do pool — usada como comentário "// ..."
     std::string cpEntryComment(const class_info &info, u2 index)
     {
         if (index == 0 || index >= info.constant_pool.size()) return "";
@@ -220,8 +208,6 @@ namespace
         }
     }
 
-    // --- Helpers de leitura do array de bytecode ---
-
     int16_t readS2(const std::vector<u1> &c, size_t i)
     {
         return (int16_t)(((uint16_t)c[i] << 8) | c[i + 1]);
@@ -237,8 +223,6 @@ namespace
     {
         return (uint16_t)(((uint16_t)c[i] << 8) | c[i + 1]);
     }
-
-    // --- Disassembler de bytecodes ---
 
     void disassembleCode(const std::vector<u1> &code, u4 code_length, const class_info &cls)
     {
@@ -441,7 +425,7 @@ namespace
             case 0xA8: cout << "jsr "       << (int)pc + readS2(code, pc+1); pc += 3; break;
             case 0xA9: cout << "ret " << (int)code[pc+1]; pc += 2; break;
 
-            case 0xAA: { // tableswitch
+            case 0xAA: {
                 size_t start = pc++;
                 while (pc % 4 != 0) pc++;
                 int32_t def  = readS4(code, pc); pc += 4;
@@ -456,7 +440,7 @@ namespace
                 break;
             }
 
-            case 0xAB: { // lookupswitch
+            case 0xAB: {
                 size_t start = pc++;
                 while (pc % 4 != 0) pc++;
                 int32_t def    = readS4(code, pc); pc += 4;
@@ -530,7 +514,7 @@ namespace
             case 0xC2: cout << "monitorenter"; pc++; break;
             case 0xC3: cout << "monitorexit";  pc++; break;
 
-            case 0xC4: { // wide
+            case 0xC4: {
                 u1 wop = code[pc+1];
                 switch (wop) {
                 case 0x15: cout << "wide iload "  << readU2(code, pc+2); break;
@@ -575,26 +559,25 @@ namespace
 
 using namespace std;
 
-Exibidor::Exibidor(const std::string &filename) : filename(filename) {}
+Exibidor::Exibidor(const std::string &filename) : filename(filename)
+{
+    Parser parser(filename);
+    classInfo = parser.parse();
+}
 
 Exibidor::~Exibidor() = default;
 
 void Exibidor::display()
 {
     cout << "Exibindo informações do arquivo " << filename << endl;
-    // deve pegar o class info do leitor
-    Parser parser(filename);
-    classInfo = parser.parse();
 
-    // Informacoes Gerais
     cout << "------------------------------------------------------" << endl;
     cout << " Informações Gerais" << endl;
     cout << "------------------------------------------------------" << endl;
     cout << "Magic Number    : 0x" << hex << classInfo.magic_number << dec << "\n";
     cout << "Minor Version   : " << classInfo.minor_version << "\n";
     cout << "Major Version   : " << classInfo.major_version << "\n";
-    cout << "Access Flags    : 0x" << hex << classInfo.access_flags << dec
-         << "  [" << getAccessFlagsString(classInfo.access_flags, FlagsContext::CLASS) << "]\n";
+    cout << "Access Flags    : " << getClassAccessFlagsString(classInfo.access_flags) << "\n";
     cout << "This Class      : #" << classInfo.this_class
          << "  // " << classNameFromConstantPool(classInfo, classInfo.this_class) << "\n";
     cout << "Super Class     : #" << classInfo.super_class << "  // ";
@@ -611,7 +594,6 @@ void Exibidor::display()
     cout << "------------------------------------------------" << endl;
     constantPoolDisplay();
 
-    // Interfaces
     if (classInfo.interfaces_count > 0) {
         cout << "------------------------------------------------------" << endl;
         cout << " Interfaces (" << classInfo.interfaces_count << ")" << endl;
@@ -637,7 +619,6 @@ void Exibidor::constantPoolDisplay()
     for (u2 i = 1; i < classInfo.constant_pool_count; ++i) {
         const cp_info &entry = classInfo.constant_pool[i];
 
-        // Slot vazio: segundo slot de Long/Double
         if (entry.tag == 0) continue;
 
         cout << "  #" << left << setw(4) << i << " = ";
@@ -704,9 +685,7 @@ void Exibidor::constantPoolDisplay()
                  << ".#" << entry.container.NameAndType.descriptor_index;
             break;
         case CONSTANT_Utf8:
-            cout << left << setw(19) << "Utf8" << " "
-                 << string(reinterpret_cast<const char *>(entry.container.Utf8.bytes),
-                            entry.container.Utf8.length);
+            cout << left << setw(19) << "Utf8" << " " << entry.utf8_str;
             break;
         case CONSTANT_MethodHandle:
             cout << left << setw(19) << "MethodHandle"
@@ -743,7 +722,7 @@ void Exibidor::fieldsDisplay()
     for (u2 i = 0; i < classInfo.fields_count; ++i) {
         const field_info &field = classInfo.fields.at(i);
         cout << "  [" << i + 1 << "] "
-             << getAccessFlagsString(field.access_flags, FlagsContext::FIELD) << " "
+             << getFieldAccessFlagsString(field.access_flags) << " "
              << formatFieldType(utf8FromConstantPool(classInfo, field.descriptor_index)) << " "
              << utf8FromConstantPool(classInfo, field.name_index) << "\n";
 
@@ -774,7 +753,7 @@ void Exibidor::methodsDisplay()
 
     for (u2 i = 0; i < classInfo.methods_count; ++i)
     {
-        method_info &method = classInfo.methods.at(i);
+        const method_info &method = classInfo.methods.at(i);
         std::pair<string, string> signature = getMethodSignature(method);
         string methodName = utf8FromConstantPool(classInfo, method.name_index);
 
@@ -785,7 +764,7 @@ void Exibidor::methodsDisplay()
         } else {
             if (methodName == "<init>")
                 methodName = classNameFromConstantPool(classInfo, classInfo.this_class);
-            cout << getAccessFlagsString(method.access_flags, FlagsContext::METHOD) << " " << signature.first
+            cout << getMethodAccessFlagsString(method.access_flags) << " " << signature.first
                  << " " << methodName << "(" << signature.second << ")";
         }
         cout << "\n";
@@ -828,7 +807,6 @@ void Exibidor::attributesDisplay()
             u2 idx = readU2(data, 0);
             cout << ": " << utf8FromConstantPool(classInfo, idx);
         } else if (name == "Deprecated" || name == "Synthetic") {
-            // sem dados
         } else if (name == "InnerClasses") {
             u2 count = readU2(data, 0);
             cout << " (" << count << ")";
@@ -842,7 +820,7 @@ void Exibidor::attributesDisplay()
                 if (inner != 0) cout << cpEntryComment(classInfo, inner);
                 if (outer != 0) cout << " em " << cpEntryComment(classInfo, outer);
                 if (iname != 0) cout << " como " << utf8FromConstantPool(classInfo, iname);
-                cout << "  [" << getAccessFlagsString(flags, FlagsContext::CLASS) << "]";
+                cout << "  [" << getClassAccessFlagsString(flags) << "]";
             }
         } else if (name == "EnclosingMethod") {
             u2 class_idx  = readU2(data, 0);

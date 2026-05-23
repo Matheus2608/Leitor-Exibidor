@@ -5,7 +5,7 @@
 #include "../parser.hpp"
 
 int main() {
-    Parser parser("exemplos/Hello.class");
+    Parser parser("../exemplos/Hello.class");
     class_info info = parser.parse();
 
     assert(info.magic_number == 0xCAFEBABE);

@@ -1,6 +1,5 @@
 #include "parser.hpp"
 
-#include <iostream>
 #include <stdexcept>
 
 using namespace std;
@@ -11,55 +10,51 @@ Parser::~Parser() = default;
 
 class_info Parser::parse()
 {
-    magicCheck();
-    minorVersionCheck();
-    majorVersionCheck();
-    constantPoolCountCheck();
-    constantPoolCheck();
-    acessFlagsCheck();
-    thisClassCheck();
-    superClassCheck();
-    interfacesCountCheck();
-    interfacesCheck();
-    fieldsCountCheck();
-    fieldsCheck();
-    methodsCountCheck();
-    methodsCheck();
-    attributesCountCheck();
-    attributesCheck();
+    parseMagic();
+    parseMinorVersion();
+    parseMajorVersion();
+    parseConstantPoolCount();
+    parseConstantPool();
+    parseAccessFlags();
+    parseThisClass();
+    parseSuperClass();
+    parseInterfacesCount();
+    parseInterfaces();
+    parseFieldsCount();
+    parseFields();
+    parseMethodsCount();
+    parseMethods();
+    parseAttributesCount();
+    parseAttributes();
     return classInfo;
 }
 
-void Parser::magicCheck()
+void Parser::parseMagic()
 {
     u4 magic = leitor.readu4();
     if (magic != 0xCAFEBABE)
     {
-        cout << "Arquivo Java invalido! Magic number incorreto." << endl;
-        cout << "Valor lido: 0x" << hex << magic << dec << endl;
         throw runtime_error("Arquivo Java invalido!");
     }
-
-    cout << "Arquivo Java valido!" << endl;
     classInfo.magic_number = magic;
 }
 
-void Parser::minorVersionCheck()
+void Parser::parseMinorVersion()
 {
     classInfo.minor_version = leitor.readu2();
 }
 
-void Parser::majorVersionCheck()
+void Parser::parseMajorVersion()
 {
     classInfo.major_version = leitor.readu2();
 }
 
-void Parser::constantPoolCountCheck()
+void Parser::parseConstantPoolCount()
 {
     classInfo.constant_pool_count = leitor.readu2();
 }
 
-void Parser::constantPoolCheck()
+void Parser::parseConstantPool()
 {
     classInfo.constant_pool.resize(classInfo.constant_pool_count);
 
@@ -110,9 +105,8 @@ void Parser::constantPoolCheck()
         case CONSTANT_Utf8:
         {
             u2 length = leitor.readu2();
-            entry.container.Utf8.length = length;
-            entry.container.Utf8.bytes = new uint8_t[length];
-            leitor.read(entry.container.Utf8.bytes, length);
+            std::vector<u1> bytes = leitor.read_bytes(length);
+            entry.utf8_str = std::string(reinterpret_cast<const char *>(bytes.data()), length);
             break;
         }
         default:
@@ -121,27 +115,27 @@ void Parser::constantPoolCheck()
     }
 }
 
-void Parser::acessFlagsCheck()
+void Parser::parseAccessFlags()
 {
     classInfo.access_flags = leitor.readu2();
 }
 
-void Parser::thisClassCheck()
+void Parser::parseThisClass()
 {
     classInfo.this_class = leitor.readu2();
 }
 
-void Parser::superClassCheck()
+void Parser::parseSuperClass()
 {
     classInfo.super_class = leitor.readu2();
 }
 
-void Parser::interfacesCountCheck()
+void Parser::parseInterfacesCount()
 {
     classInfo.interfaces_count = leitor.readu2();
 }
 
-void Parser::interfacesCheck()
+void Parser::parseInterfaces()
 {
     classInfo.interfaces.resize(classInfo.interfaces_count);
     for (u2 i = 0; i < classInfo.interfaces_count; ++i)
@@ -150,12 +144,12 @@ void Parser::interfacesCheck()
     }
 }
 
-void Parser::fieldsCountCheck()
+void Parser::parseFieldsCount()
 {
     classInfo.fields_count = leitor.readu2();
 }
 
-void Parser::fieldsCheck()
+void Parser::parseFields()
 {
     classInfo.fields.resize(classInfo.fields_count);
     for (u2 i = 0; i < classInfo.fields_count; ++i)
@@ -177,12 +171,12 @@ void Parser::fieldsCheck()
     }
 }
 
-void Parser::methodsCountCheck()
+void Parser::parseMethodsCount()
 {
     classInfo.methods_count = leitor.readu2();
 }
 
-void Parser::methodsCheck()
+void Parser::parseMethods()
 {
     classInfo.methods.resize(classInfo.methods_count);
     for (u2 i = 0; i < classInfo.methods_count; ++i)
@@ -237,12 +231,12 @@ void Parser::methodsCheck()
     }
 }
 
-void Parser::attributesCountCheck()
+void Parser::parseAttributesCount()
 {
     classInfo.attributes_count = leitor.readu2();
 }
 
-void Parser::attributesCheck()
+void Parser::parseAttributes()
 {
     classInfo.attributes.resize(classInfo.attributes_count);
     for (u2 i = 0; i < classInfo.attributes_count; ++i)
@@ -259,7 +253,7 @@ std::string Parser::getUtf8Constant(u2 index)
     if (index == 0 || index >= classInfo.constant_pool.size()) return "";
     
     const cp_info &entry = classInfo.constant_pool[index];
-    if (entry.tag != CONSTANT_Utf8 || entry.container.Utf8.bytes == nullptr) return "";
+    if (entry.tag != CONSTANT_Utf8) return "";
     
-    return std::string(reinterpret_cast<const char *>(entry.container.Utf8.bytes), entry.container.Utf8.length);
+    return entry.utf8_str;
 }

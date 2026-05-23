@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <string>
 
 typedef uint8_t u1;
 typedef uint16_t u2;
@@ -11,7 +12,7 @@ typedef uint32_t u4;
 typedef uint64_t u8;
 
 struct cp_info {
-    u1 tag;
+    u1 tag = 0;
     union {
         struct { u2 name_index; } Class;
         struct { u2 class_index; u2 name_and_type_index; } Fieldref, Methodref, InterfaceMethodref;
@@ -22,8 +23,8 @@ struct cp_info {
         struct { u2 descriptor_index; } MethodType;
         struct { u2 bootstrap_method_attr_index; u2 name_and_type_index; } InvokeDynamic;
         struct { u2 name_index; u2 descriptor_index; } NameAndType;
-        struct { u2 length; uint8_t *bytes; } Utf8;
     } container;
+    std::string utf8_str;
 };
 
 struct code_attribute;

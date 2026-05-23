@@ -25,7 +25,6 @@ private:
     void methodsDisplay();
     void attributesDisplay();
     std::pair<std::string, std::string> getMethodSignature(const method_info &method);
-    std::string toType(const std::string& descriptor);
 };
 
 #endif // EXIBIDOR_HPP

@@ -19,22 +19,22 @@ private:
     class_info classInfo;
     Leitor leitor;
 
-    void magicCheck(); 
-    void minorVersionCheck();
-    void majorVersionCheck();
-    void constantPoolCountCheck();
-    void constantPoolCheck();
-    void acessFlagsCheck();
-    void thisClassCheck();
-    void superClassCheck();
-    void interfacesCountCheck();
-    void interfacesCheck();
-    void fieldsCountCheck();
-    void fieldsCheck();
-    void methodsCountCheck();
-    void methodsCheck();
-    void attributesCountCheck();
-    void attributesCheck();
+    void parseMagic();
+    void parseMinorVersion();
+    void parseMajorVersion();
+    void parseConstantPoolCount();
+    void parseConstantPool();
+    void parseAccessFlags();
+    void parseThisClass();
+    void parseSuperClass();
+    void parseInterfacesCount();
+    void parseInterfaces();
+    void parseFieldsCount();
+    void parseFields();
+    void parseMethodsCount();
+    void parseMethods();
+    void parseAttributesCount();
+    void parseAttributes();
 
     std::string getUtf8Constant(u2 index);
 };
