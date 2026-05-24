@@ -11,7 +11,7 @@ BIN_DIR = bin
 OBJ_DIR = obj
 
 # Arquivos fonte
-SOURCES = main.cpp leitor.cpp parser.cpp exibidor.cpp
+SOURCES = main.cpp leitor.cpp parser.cpp exibidor.cpp disasm.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(OBJECTS:.o=.d)
 EXECUTABLE = $(BIN_DIR)/leitor-exibidor
