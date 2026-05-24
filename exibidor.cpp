@@ -793,6 +793,59 @@ void Exibidor::methodsDisplay()
                         }
                     }
                 }
+
+                if (ca.attributes_count > 0) {
+                    for (u2 a = 0; a < ca.attributes_count; ++a) {
+                        const attribute_info &inner_attr = ca.attributes[a];
+                        string inner_attr_name = utf8FromConstantPool(classInfo, inner_attr.attribute_name_index);
+
+                        // O vetor 'info' armazena os bytes brutos do atributo
+                        const vector<u1>& dados = inner_attr.info;
+
+                        if (inner_attr_name == "LineNumberTable" && dados.size() >= 2) {
+                            // Os primeiros 2 bytes formam o tamanho da tabela
+                            u2 lnt_length = (dados[0] << 8) | dados[1];
+                            
+                            cout << "      LineNumberTable:\n";
+                            cout << "        Start PC      Line Number\n";
+                            
+                            // Cada entrada na tabela de linhas tem 4 bytes de tamanho
+                            for (u2 l = 0; l < lnt_length; ++l) {
+                                u2 offset = 2 + (l * 4);
+                                if (offset + 3U < dados.size()) {
+                                    u2 start_pc    = (dados[offset] << 8) | dados[offset + 1];
+                                    u2 line_number = (dados[offset + 2] << 8) | dados[offset + 3];
+                                    cout << "        " << setw(8) << start_pc << "      " << line_number << "\n";
+                                }
+                            }
+                        } 
+                        else if (inner_attr_name == "LocalVariableTable" && dados.size() >= 2) {
+                            // Os primeiros 2 bytes formam o tamanho da tabela
+                            u2 lvt_length = (dados[0] << 8) | dados[1];
+                            
+                            cout << "      LocalVariableTable:\n";
+                            cout << "        Start  Length  Slot  Name            Signature\n";
+                            
+                            // Cada entrada na tabela de variáveis locais tem 10 bytes de tamanho
+                            for (u2 l = 0; l < lvt_length; ++l) {
+                                u2 offset = 2 + (l * 10);
+                                if (offset + 9U < dados.size()) {
+                                    u2 start_pc         = (dados[offset] << 8) | dados[offset + 1];
+                                    u2 length           = (dados[offset + 2] << 8) | dados[offset + 3];
+                                    u2 name_index       = (dados[offset + 4] << 8) | dados[offset + 5];
+                                    u2 descriptor_index = (dados[offset + 6] << 8) | dados[offset + 7];
+                                    u2 slot_index       = (dados[offset + 8] << 8) | dados[offset + 9];
+
+                                    cout << "        " << setw(5) << start_pc
+                                         << "  " << setw(6) << length
+                                         << "  " << setw(4) << slot_index
+                                         << "  " << setw(14) << utf8FromConstantPool(classInfo, name_index)
+                                         << "  " << utf8FromConstantPool(classInfo, descriptor_index) << "\n";
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
