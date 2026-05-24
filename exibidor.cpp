@@ -189,11 +189,24 @@ void Exibidor::fieldsDisplay()
                 cout << "      Synthetic\n";
             } else if (aname == "Deprecated") {
                 cout << "      Deprecated\n";
+            } 
+            else if (aname == "RuntimeVisibleAnnotations" || aname == "RuntimeInvisibleAnnotations") {
+                const vector<u1>& dados = attr.info;
+                if (dados.size() >= 2) {
+                    u2 num_annotations = readU2(dados, 0);
+                    cout << "      " << aname << ": " << num_annotations << " anotacao(oes) encontrada(s).\n";
+                    
+                    cout << "        Dados brutos (Hex): ";
+                    for(size_t k = 2; k < dados.size(); ++k) {
+                        cout << hex << uppercase << setfill('0') << setw(2) 
+                             << static_cast<int>(dados[k]) << " " << dec;
+                    }
+                    cout << "\n";
+                }
             }
         }
     }
 }
-
 void Exibidor::methodsDisplay()
 {
     cout << "------------------------------------------------------" << endl;
