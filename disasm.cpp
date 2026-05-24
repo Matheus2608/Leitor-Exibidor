@@ -7,6 +7,14 @@
 
 using namespace std;
 
+// Verifica que há pelo menos `n` bytes a partir de `pos` no vetor de código.
+static void requireBytes(size_t pos, size_t n, size_t code_length)
+{
+    if (n > code_length || pos > code_length - n)
+        throw std::runtime_error("disassembler: bytecode truncado no offset "
+                                 + std::to_string(pos));
+}
+
 void disassembleCode(const std::vector<u1> &code, u4 code_length, const class_info &cls)
 {
     size_t pc = 0;
@@ -32,24 +40,34 @@ void disassembleCode(const std::vector<u1> &code, u4 code_length, const class_in
         case 0x0E: cout << "dconst_0";    pc++; break;
         case 0x0F: cout << "dconst_1";    pc++; break;
 
-        case 0x10: cout << "bipush " << (int)(int8_t)code[pc + 1]; pc += 2; break;
-        case 0x11: cout << "sipush " << (int)readS2(code, pc + 1); pc += 3; break;
+        case 0x10: requireBytes(pc, 2, code_length);
+            cout << "bipush " << (int)(int8_t)code[pc + 1]; pc += 2; break;
+        case 0x11: requireBytes(pc, 3, code_length);
+            cout << "sipush " << (int)readS2(code, pc + 1); pc += 3; break;
 
-        case 0x12: { u1 idx = code[pc + 1];
+        case 0x12: { requireBytes(pc, 2, code_length);
+            u1 idx = code[pc + 1];
             cout << "ldc #" << (int)idx << "   // " << cpEntryComment(cls, idx);
             pc += 2; break; }
-        case 0x13: { u2 idx = readU2(code, pc + 1);
+        case 0x13: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "ldc_w #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0x14: { u2 idx = readU2(code, pc + 1);
+        case 0x14: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "ldc2_w #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
 
-        case 0x15: cout << "iload "  << (int)code[pc + 1]; pc += 2; break;
-        case 0x16: cout << "lload "  << (int)code[pc + 1]; pc += 2; break;
-        case 0x17: cout << "fload "  << (int)code[pc + 1]; pc += 2; break;
-        case 0x18: cout << "dload "  << (int)code[pc + 1]; pc += 2; break;
-        case 0x19: cout << "aload "  << (int)code[pc + 1]; pc += 2; break;
+        case 0x15: requireBytes(pc, 2, code_length);
+            cout << "iload "  << (int)code[pc + 1]; pc += 2; break;
+        case 0x16: requireBytes(pc, 2, code_length);
+            cout << "lload "  << (int)code[pc + 1]; pc += 2; break;
+        case 0x17: requireBytes(pc, 2, code_length);
+            cout << "fload "  << (int)code[pc + 1]; pc += 2; break;
+        case 0x18: requireBytes(pc, 2, code_length);
+            cout << "dload "  << (int)code[pc + 1]; pc += 2; break;
+        case 0x19: requireBytes(pc, 2, code_length);
+            cout << "aload "  << (int)code[pc + 1]; pc += 2; break;
 
         case 0x1A: cout << "iload_0"; pc++; break;
         case 0x1B: cout << "iload_1"; pc++; break;
@@ -81,11 +99,16 @@ void disassembleCode(const std::vector<u1> &code, u4 code_length, const class_in
         case 0x34: cout << "caload"; pc++; break;
         case 0x35: cout << "saload"; pc++; break;
 
-        case 0x36: cout << "istore " << (int)code[pc + 1]; pc += 2; break;
-        case 0x37: cout << "lstore " << (int)code[pc + 1]; pc += 2; break;
-        case 0x38: cout << "fstore " << (int)code[pc + 1]; pc += 2; break;
-        case 0x39: cout << "dstore " << (int)code[pc + 1]; pc += 2; break;
-        case 0x3A: cout << "astore " << (int)code[pc + 1]; pc += 2; break;
+        case 0x36: requireBytes(pc, 2, code_length);
+            cout << "istore " << (int)code[pc + 1]; pc += 2; break;
+        case 0x37: requireBytes(pc, 2, code_length);
+            cout << "lstore " << (int)code[pc + 1]; pc += 2; break;
+        case 0x38: requireBytes(pc, 2, code_length);
+            cout << "fstore " << (int)code[pc + 1]; pc += 2; break;
+        case 0x39: requireBytes(pc, 2, code_length);
+            cout << "dstore " << (int)code[pc + 1]; pc += 2; break;
+        case 0x3A: requireBytes(pc, 2, code_length);
+            cout << "astore " << (int)code[pc + 1]; pc += 2; break;
 
         case 0x3B: cout << "istore_0"; pc++; break;
         case 0x3C: cout << "istore_1"; pc++; break;
@@ -163,7 +186,7 @@ void disassembleCode(const std::vector<u1> &code, u4 code_length, const class_in
         case 0x81: cout << "lor";   pc++; break;
         case 0x82: cout << "ixor";  pc++; break;
         case 0x83: cout << "lxor";  pc++; break;
-        case 0x84:
+        case 0x84: requireBytes(pc, 3, code_length);
             cout << "iinc " << (int)code[pc + 1] << " " << (int)(int8_t)code[pc + 2];
             pc += 3; break;
 
@@ -189,23 +212,40 @@ void disassembleCode(const std::vector<u1> &code, u4 code_length, const class_in
         case 0x97: cout << "dcmpl"; pc++; break;
         case 0x98: cout << "dcmpg"; pc++; break;
 
-        case 0x99: cout << "ifeq "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0x9A: cout << "ifne "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0x9B: cout << "iflt "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0x9C: cout << "ifge "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0x9D: cout << "ifgt "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0x9E: cout << "ifle "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0x9F: cout << "if_icmpeq " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA0: cout << "if_icmpne " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA1: cout << "if_icmplt " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA2: cout << "if_icmpge " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA3: cout << "if_icmpgt " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA4: cout << "if_icmple " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA5: cout << "if_acmpeq " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA6: cout << "if_acmpne " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA7: cout << "goto "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA8: cout << "jsr "       << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xA9: cout << "ret " << (int)code[pc + 1]; pc += 2; break;
+        case 0x99: requireBytes(pc, 3, code_length);
+            cout << "ifeq "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0x9A: requireBytes(pc, 3, code_length);
+            cout << "ifne "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0x9B: requireBytes(pc, 3, code_length);
+            cout << "iflt "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0x9C: requireBytes(pc, 3, code_length);
+            cout << "ifge "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0x9D: requireBytes(pc, 3, code_length);
+            cout << "ifgt "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0x9E: requireBytes(pc, 3, code_length);
+            cout << "ifle "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0x9F: requireBytes(pc, 3, code_length);
+            cout << "if_icmpeq " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA0: requireBytes(pc, 3, code_length);
+            cout << "if_icmpne " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA1: requireBytes(pc, 3, code_length);
+            cout << "if_icmplt " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA2: requireBytes(pc, 3, code_length);
+            cout << "if_icmpge " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA3: requireBytes(pc, 3, code_length);
+            cout << "if_icmpgt " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA4: requireBytes(pc, 3, code_length);
+            cout << "if_icmple " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA5: requireBytes(pc, 3, code_length);
+            cout << "if_acmpeq " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA6: requireBytes(pc, 3, code_length);
+            cout << "if_acmpne " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA7: requireBytes(pc, 3, code_length);
+            cout << "goto "      << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA8: requireBytes(pc, 3, code_length);
+            cout << "jsr "       << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xA9: requireBytes(pc, 2, code_length);
+            cout << "ret " << (int)code[pc + 1]; pc += 2; break;
 
         case 0xAA: {
             size_t start = pc++;
@@ -244,90 +284,112 @@ void disassembleCode(const std::vector<u1> &code, u4 code_length, const class_in
         case 0xB0: cout << "areturn"; pc++; break;
         case 0xB1: cout << "return";  pc++; break;
 
-        case 0xB2: { u2 idx = readU2(code, pc + 1);
+        case 0xB2: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "getstatic #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0xB3: { u2 idx = readU2(code, pc + 1);
+        case 0xB3: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "putstatic #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0xB4: { u2 idx = readU2(code, pc + 1);
+        case 0xB4: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "getfield #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0xB5: { u2 idx = readU2(code, pc + 1);
+        case 0xB5: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "putfield #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0xB6: { u2 idx = readU2(code, pc + 1);
+        case 0xB6: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "invokevirtual #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0xB7: { u2 idx = readU2(code, pc + 1);
+        case 0xB7: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "invokespecial #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0xB8: { u2 idx = readU2(code, pc + 1);
+        case 0xB8: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "invokestatic #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0xB9: { u2 idx = readU2(code, pc + 1);
+        case 0xB9: { requireBytes(pc, 5, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "invokeinterface #" << idx << ", " << (int)code[pc + 3]
                  << "   // " << cpEntryComment(cls, idx);
             pc += 5; break; }
-        case 0xBA: { u2 idx = readU2(code, pc + 1);
+        case 0xBA: { requireBytes(pc, 5, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "invokedynamic #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 5; break; }
 
-        case 0xBB: { u2 idx = readU2(code, pc + 1);
+        case 0xBB: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "new #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0xBC: {
+        case 0xBC: { requireBytes(pc, 2, code_length);
             static const char *types[] = {nullptr,nullptr,nullptr,nullptr,
                 "boolean","char","float","double","byte","short","int","long"};
             int t = code[pc + 1];
             cout << "newarray " << ((t >= 4 && t <= 11) ? types[t] : "?");
             pc += 2; break; }
-        case 0xBD: { u2 idx = readU2(code, pc + 1);
+        case 0xBD: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "anewarray #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
         case 0xBE: cout << "arraylength"; pc++; break;
         case 0xBF: cout << "athrow";      pc++; break;
-        case 0xC0: { u2 idx = readU2(code, pc + 1);
+        case 0xC0: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "checkcast #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
-        case 0xC1: { u2 idx = readU2(code, pc + 1);
+        case 0xC1: { requireBytes(pc, 3, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "instanceof #" << idx << "   // " << cpEntryComment(cls, idx);
             pc += 3; break; }
         case 0xC2: cout << "monitorenter"; pc++; break;
         case 0xC3: cout << "monitorexit";  pc++; break;
 
-        case 0xC4: {
+        case 0xC4: { requireBytes(pc, 2, code_length);
             u1 wop = code[pc + 1];
-            switch (wop) {
-            case 0x15: cout << "wide iload "  << readU2(code, pc + 2); break;
-            case 0x16: cout << "wide lload "  << readU2(code, pc + 2); break;
-            case 0x17: cout << "wide fload "  << readU2(code, pc + 2); break;
-            case 0x18: cout << "wide dload "  << readU2(code, pc + 2); break;
-            case 0x19: cout << "wide aload "  << readU2(code, pc + 2); break;
-            case 0x36: cout << "wide istore " << readU2(code, pc + 2); break;
-            case 0x37: cout << "wide lstore " << readU2(code, pc + 2); break;
-            case 0x38: cout << "wide fstore " << readU2(code, pc + 2); break;
-            case 0x39: cout << "wide dstore " << readU2(code, pc + 2); break;
-            case 0x3A: cout << "wide astore " << readU2(code, pc + 2); break;
-            case 0xA9: cout << "wide ret "    << readU2(code, pc + 2); break;
-            case 0x84:
+            if (wop == 0x84) {
+                requireBytes(pc, 6, code_length);
                 cout << "wide iinc " << readU2(code, pc + 2)
                      << " " << static_cast<int16_t>(readU2(code, pc + 4));
-                pc += 6; break;
-            default: cout << "wide ???"; break;
+                pc += 6;
+            } else {
+                requireBytes(pc, 4, code_length);
+                switch (wop) {
+                case 0x15: cout << "wide iload "  << readU2(code, pc + 2); break;
+                case 0x16: cout << "wide lload "  << readU2(code, pc + 2); break;
+                case 0x17: cout << "wide fload "  << readU2(code, pc + 2); break;
+                case 0x18: cout << "wide dload "  << readU2(code, pc + 2); break;
+                case 0x19: cout << "wide aload "  << readU2(code, pc + 2); break;
+                case 0x36: cout << "wide istore " << readU2(code, pc + 2); break;
+                case 0x37: cout << "wide lstore " << readU2(code, pc + 2); break;
+                case 0x38: cout << "wide fstore " << readU2(code, pc + 2); break;
+                case 0x39: cout << "wide dstore " << readU2(code, pc + 2); break;
+                case 0x3A: cout << "wide astore " << readU2(code, pc + 2); break;
+                case 0xA9: cout << "wide ret "    << readU2(code, pc + 2); break;
+                default:   cout << "wide ???"; break;
+                }
+                pc += 4;
             }
-            if (wop != 0x84) pc += 4;
             break;
         }
 
-        case 0xC5: { u2 idx = readU2(code, pc + 1);
+        case 0xC5: { requireBytes(pc, 4, code_length);
+            u2 idx = readU2(code, pc + 1);
             cout << "multianewarray #" << idx << " " << (int)code[pc + 3]
                  << "   // " << cpEntryComment(cls, idx);
             pc += 4; break; }
-        case 0xC6: cout << "ifnull "    << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xC7: cout << "ifnonnull " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
-        case 0xC8: cout << "goto_w "    << static_cast<int64_t>(pc) + readS4(code, pc + 1); pc += 5; break;
-        case 0xC9: cout << "jsr_w "     << static_cast<int64_t>(pc) + readS4(code, pc + 1); pc += 5; break;
+        case 0xC6: requireBytes(pc, 3, code_length);
+            cout << "ifnull "    << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xC7: requireBytes(pc, 3, code_length);
+            cout << "ifnonnull " << static_cast<int64_t>(pc) + readS2(code, pc + 1); pc += 3; break;
+        case 0xC8: requireBytes(pc, 5, code_length);
+            cout << "goto_w "    << static_cast<int64_t>(pc) + readS4(code, pc + 1); pc += 5; break;
+        case 0xC9: requireBytes(pc, 5, code_length);
+            cout << "jsr_w "     << static_cast<int64_t>(pc) + readS4(code, pc + 1); pc += 5; break;
 
         default:
             cout << "unknown (0x" << std::hex << (int)op << std::dec << ")";
