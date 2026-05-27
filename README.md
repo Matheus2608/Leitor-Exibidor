@@ -21,6 +21,25 @@ make run ARGS="exemplos/Hello.class"
 ./bin/leitor-exibidor exemplos/Hello.class
 ```
 
+Compilação manual (sem make)
+-----------------------------
+
+```bash
+mkdir -p bin obj
+g++ -std=c++11 -Wall -Wextra -O2 -c main.cpp     -o obj/main.o
+g++ -std=c++11 -Wall -Wextra -O2 -c leitor.cpp   -o obj/leitor.o
+g++ -std=c++11 -Wall -Wextra -O2 -c parser.cpp   -o obj/parser.o
+g++ -std=c++11 -Wall -Wextra -O2 -c exibidor.cpp -o obj/exibidor.o
+g++ -std=c++11 -Wall -Wextra -O2 -c disasm.cpp   -o obj/disasm.o
+g++ -std=c++11 -Wall -Wextra -O2 obj/main.o obj/leitor.o obj/parser.o obj/exibidor.o obj/disasm.o -o bin/leitor-exibidor
+```
+
+Ou em uma linha:
+
+```bash
+mkdir -p bin && g++ -std=c++11 -Wall -Wextra -O2 main.cpp leitor.cpp parser.cpp exibidor.cpp disasm.cpp -o bin/leitor-exibidor
+```
+
 Testes
 ------
 

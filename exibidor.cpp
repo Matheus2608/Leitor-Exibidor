@@ -9,6 +9,17 @@
 
 using namespace std;
 
+static std::string majorVersionToJava(u2 major) {
+    if (major >= 49) return "Java " + std::to_string(major - 44);
+    switch (major) {
+        case 48: return "Java 1.4";
+        case 47: return "Java 1.3";
+        case 46: return "Java 1.2";
+        case 45: return "Java 1.1";
+        default: return "desconhecido";
+    }
+}
+
 Exibidor::Exibidor(const std::string &filename) : filename(filename)
 {
     Parser parser(filename);
@@ -26,7 +37,7 @@ void Exibidor::display()
     cout << "------------------------------------------------------" << endl;
     cout << "Magic Number    : 0x" << hex << classInfo.magic_number << dec << "\n";
     cout << "Minor Version   : " << classInfo.minor_version << "\n";
-    cout << "Major Version   : " << classInfo.major_version << "\n";
+    cout << "Major Version   : " << classInfo.major_version << " (" << majorVersionToJava(classInfo.major_version) << ")\n";
     cout << "Access Flags    : " << getClassAccessFlagsString(classInfo.access_flags) << "\n";
     cout << "This Class      : #" << classInfo.this_class
          << "  // " << classNameFromConstantPool(classInfo, classInfo.this_class) << "\n";
