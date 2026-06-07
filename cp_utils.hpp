@@ -143,4 +143,26 @@ inline std::string cpEntryComment(const class_info &info, u2 index)
     }
 }
 
+inline const method_info* findMethod(const class_info& cls,
+                                     const std::string& name,
+                                     const std::string& descriptor) {
+    for (const method_info& m : cls.methods) {
+        if (utf8FromConstantPool(cls, m.name_index)       == name &&
+            utf8FromConstantPool(cls, m.descriptor_index) == descriptor)
+            return &m;
+    }
+    return nullptr;
+}
+
+inline const field_info* findField(const class_info& cls,
+                                   const std::string& name,
+                                   const std::string& descriptor) {
+    for (const field_info& f : cls.fields) {
+        if (utf8FromConstantPool(cls, f.name_index)       == name &&
+            utf8FromConstantPool(cls, f.descriptor_index) == descriptor)
+            return &f;
+    }
+    return nullptr;
+}
+
 #endif // CP_UTILS_HPP

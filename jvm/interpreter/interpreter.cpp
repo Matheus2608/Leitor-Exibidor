@@ -1,0 +1,451 @@
+#include "interpreter.hpp"
+#include "cp_utils.hpp"
+
+#include <stdexcept>
+#include <sstream>
+#include <iomanip>
+
+// =============================================================================
+// Construtor — monta a dispatch table
+// =============================================================================
+
+Interpreter::Interpreter(ClassLoader& loader, FrameStack& frame_stack, Heap& heap)
+    : loader_(loader), frame_stack_(frame_stack), heap_(heap)
+{
+    buildDispatchTable();
+}
+
+void Interpreter::buildDispatchTable() {
+    // Cada entrada mapeia: opcode → lambda que chama o método correspondente.
+    // Os opcodes não listados aqui lançam erro em run().
+
+    // Constantes
+    dispatch_table_[0x00] = [this]{ op_nop();         };
+    dispatch_table_[0x01] = [this]{ op_aconst_null(); };
+    dispatch_table_[0x02] = [this]{ op_iconst_m1();   };
+    dispatch_table_[0x03] = [this]{ op_iconst_0();    };
+    dispatch_table_[0x04] = [this]{ op_iconst_1();    };
+    dispatch_table_[0x05] = [this]{ op_iconst_2();    };
+    dispatch_table_[0x06] = [this]{ op_iconst_3();    };
+    dispatch_table_[0x07] = [this]{ op_iconst_4();    };
+    dispatch_table_[0x08] = [this]{ op_iconst_5();    };
+    dispatch_table_[0x09] = [this]{ op_lconst_0();    };
+    dispatch_table_[0x0a] = [this]{ op_lconst_1();    };
+    dispatch_table_[0x0b] = [this]{ op_fconst_0();    };
+    dispatch_table_[0x0c] = [this]{ op_fconst_1();    };
+    dispatch_table_[0x0d] = [this]{ op_fconst_2();    };
+    dispatch_table_[0x0e] = [this]{ op_dconst_0();    };
+    dispatch_table_[0x0f] = [this]{ op_dconst_1();    };
+    dispatch_table_[0x10] = [this]{ op_bipush();      };
+    dispatch_table_[0x11] = [this]{ op_sipush();      };
+    dispatch_table_[0x12] = [this]{ op_ldc();         };
+    dispatch_table_[0x13] = [this]{ op_ldc_w();       };
+    dispatch_table_[0x14] = [this]{ op_ldc2_w();      };
+
+    // Load
+    dispatch_table_[0x15] = [this]{ op_iload();   }; dispatch_table_[0x1a] = [this]{ op_iload_0(); };
+    dispatch_table_[0x1b] = [this]{ op_iload_1(); }; dispatch_table_[0x1c] = [this]{ op_iload_2(); };
+    dispatch_table_[0x1d] = [this]{ op_iload_3(); };
+    dispatch_table_[0x16] = [this]{ op_lload();   }; dispatch_table_[0x1e] = [this]{ op_lload_0(); };
+    dispatch_table_[0x1f] = [this]{ op_lload_1(); }; dispatch_table_[0x20] = [this]{ op_lload_2(); };
+    dispatch_table_[0x21] = [this]{ op_lload_3(); };
+    dispatch_table_[0x17] = [this]{ op_fload();   }; dispatch_table_[0x22] = [this]{ op_fload_0(); };
+    dispatch_table_[0x23] = [this]{ op_fload_1(); }; dispatch_table_[0x24] = [this]{ op_fload_2(); };
+    dispatch_table_[0x25] = [this]{ op_fload_3(); };
+    dispatch_table_[0x18] = [this]{ op_dload();   }; dispatch_table_[0x26] = [this]{ op_dload_0(); };
+    dispatch_table_[0x27] = [this]{ op_dload_1(); }; dispatch_table_[0x28] = [this]{ op_dload_2(); };
+    dispatch_table_[0x29] = [this]{ op_dload_3(); };
+    dispatch_table_[0x19] = [this]{ op_aload();   }; dispatch_table_[0x2a] = [this]{ op_aload_0(); };
+    dispatch_table_[0x2b] = [this]{ op_aload_1(); }; dispatch_table_[0x2c] = [this]{ op_aload_2(); };
+    dispatch_table_[0x2d] = [this]{ op_aload_3(); };
+
+    // Store
+    dispatch_table_[0x36] = [this]{ op_istore();   }; dispatch_table_[0x3b] = [this]{ op_istore_0(); };
+    dispatch_table_[0x3c] = [this]{ op_istore_1(); }; dispatch_table_[0x3d] = [this]{ op_istore_2(); };
+    dispatch_table_[0x3e] = [this]{ op_istore_3(); };
+    dispatch_table_[0x37] = [this]{ op_lstore();   }; dispatch_table_[0x3f] = [this]{ op_lstore_0(); };
+    dispatch_table_[0x40] = [this]{ op_lstore_1(); }; dispatch_table_[0x41] = [this]{ op_lstore_2(); };
+    dispatch_table_[0x42] = [this]{ op_lstore_3(); };
+    dispatch_table_[0x38] = [this]{ op_fstore();   }; dispatch_table_[0x43] = [this]{ op_fstore_0(); };
+    dispatch_table_[0x44] = [this]{ op_fstore_1(); }; dispatch_table_[0x45] = [this]{ op_fstore_2(); };
+    dispatch_table_[0x46] = [this]{ op_fstore_3(); };
+    dispatch_table_[0x39] = [this]{ op_dstore();   }; dispatch_table_[0x47] = [this]{ op_dstore_0(); };
+    dispatch_table_[0x48] = [this]{ op_dstore_1(); }; dispatch_table_[0x49] = [this]{ op_dstore_2(); };
+    dispatch_table_[0x4a] = [this]{ op_dstore_3(); };
+    dispatch_table_[0x3a] = [this]{ op_astore();   }; dispatch_table_[0x4b] = [this]{ op_astore_0(); };
+    dispatch_table_[0x4c] = [this]{ op_astore_1(); }; dispatch_table_[0x4d] = [this]{ op_astore_2(); };
+    dispatch_table_[0x4e] = [this]{ op_astore_3(); };
+
+    // Aritmética inteira
+    dispatch_table_[0x60] = [this]{ op_iadd();  }; dispatch_table_[0x64] = [this]{ op_isub();  };
+    dispatch_table_[0x68] = [this]{ op_imul();  }; dispatch_table_[0x6c] = [this]{ op_idiv();  };
+    dispatch_table_[0x70] = [this]{ op_irem();  }; dispatch_table_[0x74] = [this]{ op_ineg();  };
+    dispatch_table_[0x7e] = [this]{ op_iand();  }; dispatch_table_[0x80] = [this]{ op_ior();   };
+    dispatch_table_[0x82] = [this]{ op_ixor();  }; dispatch_table_[0x78] = [this]{ op_ishl();  };
+    dispatch_table_[0x7a] = [this]{ op_ishr();  }; dispatch_table_[0x7c] = [this]{ op_iushr(); };
+    dispatch_table_[0x84] = [this]{ op_iinc();  };
+
+    // Aritmética long
+    dispatch_table_[0x61] = [this]{ op_ladd();  }; dispatch_table_[0x65] = [this]{ op_lsub();  };
+    dispatch_table_[0x69] = [this]{ op_lmul();  }; dispatch_table_[0x6d] = [this]{ op_ldiv();  };
+    dispatch_table_[0x71] = [this]{ op_lrem();  }; dispatch_table_[0x75] = [this]{ op_lneg();  };
+    dispatch_table_[0x7f] = [this]{ op_land();  }; dispatch_table_[0x81] = [this]{ op_lor();   };
+    dispatch_table_[0x83] = [this]{ op_lxor();  }; dispatch_table_[0x79] = [this]{ op_lshl();  };
+    dispatch_table_[0x7b] = [this]{ op_lshr();  }; dispatch_table_[0x7d] = [this]{ op_lushr(); };
+    dispatch_table_[0x94] = [this]{ op_lcmp();  };
+
+    // Aritmética float
+    dispatch_table_[0x62] = [this]{ op_fadd();  }; dispatch_table_[0x66] = [this]{ op_fsub();  };
+    dispatch_table_[0x6a] = [this]{ op_fmul();  }; dispatch_table_[0x6e] = [this]{ op_fdiv();  };
+    dispatch_table_[0x72] = [this]{ op_frem();  }; dispatch_table_[0x76] = [this]{ op_fneg();  };
+    dispatch_table_[0x95] = [this]{ op_fcmpl(); }; dispatch_table_[0x96] = [this]{ op_fcmpg(); };
+
+    // Aritmética double
+    dispatch_table_[0x63] = [this]{ op_dadd();  }; dispatch_table_[0x67] = [this]{ op_dsub();  };
+    dispatch_table_[0x6b] = [this]{ op_dmul();  }; dispatch_table_[0x6f] = [this]{ op_ddiv();  };
+    dispatch_table_[0x73] = [this]{ op_drem();  }; dispatch_table_[0x77] = [this]{ op_dneg();  };
+    dispatch_table_[0x97] = [this]{ op_dcmpl(); }; dispatch_table_[0x98] = [this]{ op_dcmpg(); };
+
+    // Manipulação de pilha
+    dispatch_table_[0x57] = [this]{ op_pop();    }; dispatch_table_[0x58] = [this]{ op_pop2();   };
+    dispatch_table_[0x59] = [this]{ op_dup();    }; dispatch_table_[0x5a] = [this]{ op_dup_x1(); };
+    dispatch_table_[0x5b] = [this]{ op_dup_x2(); }; dispatch_table_[0x5c] = [this]{ op_dup2();   };
+    dispatch_table_[0x5f] = [this]{ op_swap();   };
+
+    // Conversões
+    dispatch_table_[0x85] = [this]{ op_i2l(); }; dispatch_table_[0x86] = [this]{ op_i2f(); };
+    dispatch_table_[0x87] = [this]{ op_i2d(); }; dispatch_table_[0x88] = [this]{ op_l2i(); };
+    dispatch_table_[0x89] = [this]{ op_l2f(); }; dispatch_table_[0x8a] = [this]{ op_l2d(); };
+    dispatch_table_[0x8b] = [this]{ op_f2i(); }; dispatch_table_[0x8c] = [this]{ op_f2l(); };
+    dispatch_table_[0x8d] = [this]{ op_f2d(); }; dispatch_table_[0x8e] = [this]{ op_d2i(); };
+    dispatch_table_[0x8f] = [this]{ op_d2l(); }; dispatch_table_[0x90] = [this]{ op_d2f(); };
+    dispatch_table_[0x91] = [this]{ op_i2b(); }; dispatch_table_[0x92] = [this]{ op_i2c(); };
+    dispatch_table_[0x93] = [this]{ op_i2s(); };
+
+    // Controle de fluxo
+    dispatch_table_[0x99] = [this]{ op_ifeq();      }; dispatch_table_[0x9a] = [this]{ op_ifne();      };
+    dispatch_table_[0x9b] = [this]{ op_iflt();      }; dispatch_table_[0x9c] = [this]{ op_ifge();      };
+    dispatch_table_[0x9d] = [this]{ op_ifgt();      }; dispatch_table_[0x9e] = [this]{ op_ifle();      };
+    dispatch_table_[0x9f] = [this]{ op_if_icmpeq(); }; dispatch_table_[0xa0] = [this]{ op_if_icmpne(); };
+    dispatch_table_[0xa1] = [this]{ op_if_icmplt(); }; dispatch_table_[0xa2] = [this]{ op_if_icmpge(); };
+    dispatch_table_[0xa3] = [this]{ op_if_icmpgt(); }; dispatch_table_[0xa4] = [this]{ op_if_icmple(); };
+    dispatch_table_[0xc6] = [this]{ op_ifnull();    }; dispatch_table_[0xc7] = [this]{ op_ifnonnull(); };
+    dispatch_table_[0xa5] = [this]{ op_if_acmpeq(); }; dispatch_table_[0xa6] = [this]{ op_if_acmpne(); };
+    dispatch_table_[0xa7] = [this]{ op_goto();      }; dispatch_table_[0xc8] = [this]{ op_goto_w();    };
+    dispatch_table_[0xaa] = [this]{ op_tableswitch();  };
+    dispatch_table_[0xab] = [this]{ op_lookupswitch(); };
+
+    // Invocação
+    dispatch_table_[0xb8] = [this]{ op_invokestatic();    };
+    dispatch_table_[0xb7] = [this]{ op_invokespecial();   };
+    dispatch_table_[0xb6] = [this]{ op_invokevirtual();   };
+    dispatch_table_[0xb9] = [this]{ op_invokeinterface(); };
+
+    // Retorno
+    dispatch_table_[0xb1] = [this]{ op_return();  };
+    dispatch_table_[0xac] = [this]{ op_ireturn(); }; dispatch_table_[0xad] = [this]{ op_lreturn(); };
+    dispatch_table_[0xae] = [this]{ op_freturn(); }; dispatch_table_[0xaf] = [this]{ op_dreturn(); };
+    dispatch_table_[0xb0] = [this]{ op_areturn(); };
+
+    // Campos
+    dispatch_table_[0xb2] = [this]{ op_getstatic(); }; dispatch_table_[0xb3] = [this]{ op_putstatic(); };
+    dispatch_table_[0xb4] = [this]{ op_getfield();  }; dispatch_table_[0xb5] = [this]{ op_putfield();  };
+
+    // Objetos e arrays
+    dispatch_table_[0xbb] = [this]{ op_new();         };
+    dispatch_table_[0xbc] = [this]{ op_newarray();    }; dispatch_table_[0xbd] = [this]{ op_anewarray();  };
+    dispatch_table_[0xbe] = [this]{ op_arraylength(); };
+    dispatch_table_[0x2e] = [this]{ op_iaload();  }; dispatch_table_[0x4f] = [this]{ op_iastore(); };
+    dispatch_table_[0x2f] = [this]{ op_laload();  }; dispatch_table_[0x50] = [this]{ op_lastore(); };
+    dispatch_table_[0x30] = [this]{ op_faload();  }; dispatch_table_[0x51] = [this]{ op_fastore(); };
+    dispatch_table_[0x31] = [this]{ op_daload();  }; dispatch_table_[0x52] = [this]{ op_dastore(); };
+    dispatch_table_[0x32] = [this]{ op_aaload();  }; dispatch_table_[0x53] = [this]{ op_aastore(); };
+    dispatch_table_[0x33] = [this]{ op_baload();  }; dispatch_table_[0x54] = [this]{ op_bastore(); };
+    dispatch_table_[0x34] = [this]{ op_caload();  }; dispatch_table_[0x55] = [this]{ op_castore(); };
+    dispatch_table_[0x35] = [this]{ op_saload();  }; dispatch_table_[0x56] = [this]{ op_sastore(); };
+
+    // Exceções e type checks
+    dispatch_table_[0xbf] = [this]{ op_athrow();     };
+    dispatch_table_[0xc0] = [this]{ op_checkcast();  };
+    dispatch_table_[0xc1] = [this]{ op_instanceof(); };
+}
+
+// =============================================================================
+// Loop principal
+// =============================================================================
+
+void Interpreter::execute(const class_info& cls, const method_info& method) {
+    const code_attribute* code = findCode(method);
+    if (!code)
+        throw std::runtime_error("Interpretador: metodo nao tem atributo Code");
+
+    Frame f;
+    f.cls    = &cls;
+    f.method = &method;
+    f.code   = code;
+    f.pc     = 0;
+    f.locals.resize(code->max_locals, Value::fromInt(0));
+
+    frame_stack_.push(std::move(f));
+    run();
+}
+
+void Interpreter::run() {
+    while (!halted_ && !frame_stack_.empty()) {
+        uint8_t opcode = fetchU1();
+
+        auto it = dispatch_table_.find(opcode);
+        if (it == dispatch_table_.end()) {
+            std::ostringstream oss;
+            oss << "Opcode nao implementado: 0x"
+                << std::hex << std::setw(2) << std::setfill('0')
+                << static_cast<int>(opcode);
+            throw std::runtime_error(oss.str());
+        }
+
+        it->second(); // executa o handler do opcode
+    }
+}
+
+// =============================================================================
+// Helpers de leitura de bytecode
+// =============================================================================
+
+Frame& Interpreter::currentFrame() {
+    return frame_stack_.top();
+}
+
+uint8_t Interpreter::fetchU1() {
+    Frame& f = currentFrame();
+    return f.code->code[f.pc++];
+}
+
+uint16_t Interpreter::fetchU2() {
+    uint8_t hi = fetchU1();
+    uint8_t lo = fetchU1();
+    return static_cast<uint16_t>((hi << 8) | lo);
+}
+
+uint32_t Interpreter::fetchU4() {
+    uint16_t hi = fetchU2();
+    uint16_t lo = fetchU2();
+    return static_cast<uint32_t>((hi << 16) | lo);
+}
+
+int8_t  Interpreter::fetchS1() { return static_cast<int8_t> (fetchU1()); }
+int16_t Interpreter::fetchS2() { return static_cast<int16_t>(fetchU2()); }
+int32_t Interpreter::fetchS4() { return static_cast<int32_t>(fetchU4()); }
+
+void Interpreter::branch(int32_t offset) {
+    // offset é relativo ao início da instrução (pc já avançou 1 para o opcode
+    // e mais N para os operandos); ajustamos subtraindo o que foi consumido.
+    Frame& f = currentFrame();
+    f.pc += offset - 3; // 3 = 1 (opcode) + 2 (operandos de branch padrão)
+}
+
+const code_attribute* Interpreter::findCode(const method_info& method) const {
+    for (const attribute_info& attr : method.attributes)
+        if (attr.code_data)
+            return attr.code_data.get();
+    return nullptr;
+}
+
+// =============================================================================
+// Implementação dos opcodes — exemplos que estabelecem o padrão
+// =============================================================================
+
+void Interpreter::op_nop() { /* não faz nada */ }
+
+void Interpreter::op_aconst_null() {
+    currentFrame().push(Value::null());
+}
+
+void Interpreter::op_iconst(int32_t value) {
+    currentFrame().push(Value::fromInt(value));
+}
+
+void Interpreter::op_iconst_m1() { op_iconst(-1); }
+void Interpreter::op_iconst_0()  { op_iconst(0);  }
+void Interpreter::op_iconst_1()  { op_iconst(1);  }
+void Interpreter::op_iconst_2()  { op_iconst(2);  }
+void Interpreter::op_iconst_3()  { op_iconst(3);  }
+void Interpreter::op_iconst_4()  { op_iconst(4);  }
+void Interpreter::op_iconst_5()  { op_iconst(5);  }
+
+void Interpreter::op_lconst_0() { currentFrame().push(Value::fromLong(0)); }
+void Interpreter::op_lconst_1() { currentFrame().push(Value::fromLong(1)); }
+
+void Interpreter::op_fconst_0() { currentFrame().push(Value::fromFloat(0.0f)); }
+void Interpreter::op_fconst_1() { currentFrame().push(Value::fromFloat(1.0f)); }
+void Interpreter::op_fconst_2() { currentFrame().push(Value::fromFloat(2.0f)); }
+
+void Interpreter::op_dconst_0() { currentFrame().push(Value::fromDouble(0.0)); }
+void Interpreter::op_dconst_1() { currentFrame().push(Value::fromDouble(1.0)); }
+
+void Interpreter::op_bipush() {
+    int8_t val = fetchS1();
+    currentFrame().push(Value::fromInt(val));
+}
+
+void Interpreter::op_sipush() {
+    int16_t val = fetchS2();
+    currentFrame().push(Value::fromInt(val));
+}
+
+void Interpreter::op_iadd() {
+    Frame& f = currentFrame();
+    int32_t b = f.pop().data.i;
+    int32_t a = f.pop().data.i;
+    f.push(Value::fromInt(a + b));
+}
+
+void Interpreter::op_isub() {
+    Frame& f = currentFrame();
+    int32_t b = f.pop().data.i;
+    int32_t a = f.pop().data.i;
+    f.push(Value::fromInt(a - b));
+}
+
+void Interpreter::op_imul() {
+    Frame& f = currentFrame();
+    int32_t b = f.pop().data.i;
+    int32_t a = f.pop().data.i;
+    f.push(Value::fromInt(a * b));
+}
+
+void Interpreter::op_idiv() {
+    Frame& f = currentFrame();
+    int32_t b = f.pop().data.i;
+    int32_t a = f.pop().data.i;
+    if (b == 0) throw std::runtime_error("ArithmeticException: / by zero");
+    f.push(Value::fromInt(a / b));
+}
+
+void Interpreter::op_irem() {
+    Frame& f = currentFrame();
+    int32_t b = f.pop().data.i;
+    int32_t a = f.pop().data.i;
+    if (b == 0) throw std::runtime_error("ArithmeticException: / by zero");
+    f.push(Value::fromInt(a % b));
+}
+
+void Interpreter::op_ineg() {
+    Frame& f = currentFrame();
+    f.push(Value::fromInt(-f.pop().data.i));
+}
+
+void Interpreter::op_iload_0() { Frame& f = currentFrame(); f.push(f.locals[0]); }
+void Interpreter::op_iload_1() { Frame& f = currentFrame(); f.push(f.locals[1]); }
+void Interpreter::op_iload_2() { Frame& f = currentFrame(); f.push(f.locals[2]); }
+void Interpreter::op_iload_3() { Frame& f = currentFrame(); f.push(f.locals[3]); }
+
+void Interpreter::op_iload() {
+    Frame& f = currentFrame();
+    uint8_t idx = fetchU1();
+    f.push(f.locals[idx]);
+}
+
+void Interpreter::op_istore_0() { Frame& f = currentFrame(); f.locals[0] = f.pop(); }
+void Interpreter::op_istore_1() { Frame& f = currentFrame(); f.locals[1] = f.pop(); }
+void Interpreter::op_istore_2() { Frame& f = currentFrame(); f.locals[2] = f.pop(); }
+void Interpreter::op_istore_3() { Frame& f = currentFrame(); f.locals[3] = f.pop(); }
+
+void Interpreter::op_istore() {
+    Frame& f = currentFrame();
+    uint8_t idx = fetchU1();
+    f.locals[idx] = f.pop();
+}
+
+void Interpreter::op_iinc() {
+    Frame& f  = currentFrame();
+    uint8_t idx = fetchU1();
+    int8_t  cst = fetchS1();
+    f.locals[idx].data.i += cst;
+}
+
+void Interpreter::op_return() {
+    frame_stack_.pop();
+    // se a pilha ficou vazia, run() encerra naturalmente
+}
+
+void Interpreter::op_ireturn() {
+    Value retval = frame_stack_.top().pop();
+    frame_stack_.pop();
+    if (!frame_stack_.empty())
+        frame_stack_.top().push(retval);
+}
+
+void Interpreter::op_goto() {
+    int16_t offset = fetchS2();
+    Frame& f = currentFrame();
+    f.pc += offset - 3; // -3 = desfaz o avanço do opcode (1) + dos dois bytes do operando (2)
+}
+
+// Os demais opcodes seguem o mesmo padrão acima.
+// Implemente um a um conforme avançar nas etapas.
+
+// Stubs para opcodes ainda não implementados
+// (substituir pelo corpo real à medida que o projeto avança)
+
+void Interpreter::op_lload()   {} void Interpreter::op_lload_0() {} void Interpreter::op_lload_1() {}
+void Interpreter::op_lload_2() {} void Interpreter::op_lload_3() {}
+void Interpreter::op_fload()   {} void Interpreter::op_fload_0() {} void Interpreter::op_fload_1() {}
+void Interpreter::op_fload_2() {} void Interpreter::op_fload_3() {}
+void Interpreter::op_dload()   {} void Interpreter::op_dload_0() {} void Interpreter::op_dload_1() {}
+void Interpreter::op_dload_2() {} void Interpreter::op_dload_3() {}
+void Interpreter::op_aload()   {} void Interpreter::op_aload_0() {} void Interpreter::op_aload_1() {}
+void Interpreter::op_aload_2() {} void Interpreter::op_aload_3() {}
+void Interpreter::op_lstore()  {} void Interpreter::op_lstore_0(){} void Interpreter::op_lstore_1(){}
+void Interpreter::op_lstore_2(){} void Interpreter::op_lstore_3(){}
+void Interpreter::op_fstore()  {} void Interpreter::op_fstore_0(){} void Interpreter::op_fstore_1(){}
+void Interpreter::op_fstore_2(){} void Interpreter::op_fstore_3(){}
+void Interpreter::op_dstore()  {} void Interpreter::op_dstore_0(){} void Interpreter::op_dstore_1(){}
+void Interpreter::op_dstore_2(){} void Interpreter::op_dstore_3(){}
+void Interpreter::op_astore()  {} void Interpreter::op_astore_0(){} void Interpreter::op_astore_1(){}
+void Interpreter::op_astore_2(){} void Interpreter::op_astore_3(){}
+void Interpreter::op_ldc()     {} void Interpreter::op_ldc_w()   {} void Interpreter::op_ldc2_w()  {}
+void Interpreter::op_ladd()    {} void Interpreter::op_lsub()    {} void Interpreter::op_lmul()    {}
+void Interpreter::op_ldiv()    {} void Interpreter::op_lrem()    {} void Interpreter::op_lneg()    {}
+void Interpreter::op_land()    {} void Interpreter::op_lor()     {} void Interpreter::op_lxor()    {}
+void Interpreter::op_lshl()    {} void Interpreter::op_lshr()    {} void Interpreter::op_lushr()   {}
+void Interpreter::op_lcmp()    {}
+void Interpreter::op_fadd()    {} void Interpreter::op_fsub()    {} void Interpreter::op_fmul()    {}
+void Interpreter::op_fdiv()    {} void Interpreter::op_frem()    {} void Interpreter::op_fneg()    {}
+void Interpreter::op_fcmpl()   {} void Interpreter::op_fcmpg()   {}
+void Interpreter::op_dadd()    {} void Interpreter::op_dsub()    {} void Interpreter::op_dmul()    {}
+void Interpreter::op_ddiv()    {} void Interpreter::op_drem()    {} void Interpreter::op_dneg()    {}
+void Interpreter::op_dcmpl()   {} void Interpreter::op_dcmpg()   {}
+void Interpreter::op_iand()    {} void Interpreter::op_ior()     {} void Interpreter::op_ixor()    {}
+void Interpreter::op_ishl()    {} void Interpreter::op_ishr()    {} void Interpreter::op_iushr()   {}
+void Interpreter::op_pop()     {} void Interpreter::op_pop2()    {}
+void Interpreter::op_dup()     {} void Interpreter::op_dup_x1()  {} void Interpreter::op_dup_x2()  {}
+void Interpreter::op_dup2()    {} void Interpreter::op_swap()    {}
+void Interpreter::op_i2l()     {} void Interpreter::op_i2f()     {} void Interpreter::op_i2d()     {}
+void Interpreter::op_l2i()     {} void Interpreter::op_l2f()     {} void Interpreter::op_l2d()     {}
+void Interpreter::op_f2i()     {} void Interpreter::op_f2l()     {} void Interpreter::op_f2d()     {}
+void Interpreter::op_d2i()     {} void Interpreter::op_d2l()     {} void Interpreter::op_d2f()     {}
+void Interpreter::op_i2b()     {} void Interpreter::op_i2c()     {} void Interpreter::op_i2s()     {}
+void Interpreter::op_ifeq()    {} void Interpreter::op_ifne()    {} void Interpreter::op_iflt()    {}
+void Interpreter::op_ifge()    {} void Interpreter::op_ifgt()    {} void Interpreter::op_ifle()    {}
+void Interpreter::op_if_icmpeq(){} void Interpreter::op_if_icmpne(){} void Interpreter::op_if_icmplt(){}
+void Interpreter::op_if_icmpge(){} void Interpreter::op_if_icmpgt(){} void Interpreter::op_if_icmple(){}
+void Interpreter::op_ifnull()  {} void Interpreter::op_ifnonnull(){}
+void Interpreter::op_if_acmpeq(){} void Interpreter::op_if_acmpne(){}
+void Interpreter::op_goto_w()  {} void Interpreter::op_tableswitch() {} void Interpreter::op_lookupswitch() {}
+void Interpreter::op_lreturn() {} void Interpreter::op_freturn() {}
+void Interpreter::op_dreturn() {} void Interpreter::op_areturn() {}
+void Interpreter::op_invokestatic()    {} void Interpreter::op_invokespecial()   {}
+void Interpreter::op_invokevirtual()   {} void Interpreter::op_invokeinterface() {}
+void Interpreter::op_getstatic() {} void Interpreter::op_putstatic() {}
+void Interpreter::op_getfield()  {} void Interpreter::op_putfield()  {}
+void Interpreter::op_new()         {} void Interpreter::op_newarray()    {}
+void Interpreter::op_anewarray()   {} void Interpreter::op_arraylength() {}
+void Interpreter::op_iaload()  {} void Interpreter::op_iastore() {}
+void Interpreter::op_laload()  {} void Interpreter::op_lastore() {}
+void Interpreter::op_faload()  {} void Interpreter::op_fastore() {}
+void Interpreter::op_daload()  {} void Interpreter::op_dastore() {}
+void Interpreter::op_aaload()  {} void Interpreter::op_aastore() {}
+void Interpreter::op_baload()  {} void Interpreter::op_bastore() {}
+void Interpreter::op_caload()  {} void Interpreter::op_castore() {}
+void Interpreter::op_saload()  {} void Interpreter::op_sastore() {}
+void Interpreter::op_athrow()    {} void Interpreter::op_checkcast()  {} void Interpreter::op_instanceof() {}
